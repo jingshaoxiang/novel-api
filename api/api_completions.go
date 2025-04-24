@@ -176,7 +176,7 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("获取锁定的key值列表：", falseKeys)
 
 	// 获取随机密钥
-	keys, err := GetRandomKey(viper.GetString("Nkey.path"))
+	keys, err := GetRandomKey(viper.GetString("Nkey.path"), falseKeys)
 	fmt.Println("获取到的随机key：", keys)
 	if err != nil {
 		log.Fatalf("Error getting random key: %v", err)
@@ -193,6 +193,8 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Failed to decode request body: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		// 释放key值
+		ReleaseKey(keys)
 		return
 	}
 
@@ -216,6 +218,8 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 		base64String, err = ImageURLToBase64(imageURLS)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
+			// 释放key值
+			ReleaseKey(keys)
 		}
 	}
 
@@ -279,13 +283,15 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Failed to create new request: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 释放key值
+		ReleaseKey(keys)
 		return
 	}
 	log.Println("API request created successfully:", request)
 
 	// 设置请求头
 	request.Header.Set("Authorization", "Bearer "+keys)
-	fmt.Println("Authorization", "Bearer "+keys)
+	//fmt.Println("Authorization", "Bearer "+keys)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "*/*")
 	request.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
@@ -301,9 +307,14 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Failed to send request: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 释放key值
+		ReleaseKey(keys)
 		return
 	}
 	defer resp.Body.Close()
+
+	// 释放key值
+	ReleaseKey(keys)
 
 	log.Printf("Received response with status code: %d", resp.StatusCode)
 
@@ -318,9 +329,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "API Key unauthorized. Key potential expired or invalid.", http.StatusUnauthorized)
 			return // 401 错误直接返回
 		}
-		// 释放key值
-		ReleaseKey(keys)
-		return
 	}
 
 	// 读取响应体
@@ -328,7 +336,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to read response body: "+err.Error(), http.StatusInternalServerError)
 		log.Printf("Failed to read response body: %v", err)
-		return
 	}
 	log.Println("Response body read successfully.")
 
@@ -337,7 +344,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to read ZIP file: "+err.Error(), http.StatusInternalServerError)
 		log.Printf("Failed to create zip reader: %v", err)
-		return
 	}
 	log.Println("ZIP file read successfully.")
 
@@ -354,7 +360,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				http.Error(w, "创建图像文件失败: "+err.Error(), http.StatusInternalServerError)
 				log.Printf("创建图像文件失败: %v", err)
-				return
 			}
 			defer dstFile.Close()
 
@@ -363,14 +368,12 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				http.Error(w, "打开 ZIP 中的文件失败: "+err.Error(), http.StatusInternalServerError)
 				log.Printf("打开 ZIP 中的文件失败: %v", err)
-				return
 			}
 
 			// 将图像写入目标文件
 			if _, err := io.Copy(dstFile, srcFile); err != nil {
 				http.Error(w, "写入图像文件失败: "+err.Error(), http.StatusInternalServerError)
 				log.Printf("写入图像文件失败: %v", err)
-				return
 			}
 			log.Println("图像文件写入成功。")
 
@@ -386,7 +389,7 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 			outputs := strings.ReplaceAll(string(output), "\n", "")
 
 			// 打印命令输出
-			log.Printf("URL输出:\n%s\n", output)
+			//log.Printf("URL输出:\n%s\n", output)
 
 			publicLink := fmt.Sprintf("![%s](%s)", imageName, outputs)
 			fmt.Println(publicLink)
@@ -406,9 +409,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-
-	// 释放key值
-	ReleaseKey(keys)
 
 	// 结束流式输出
 	w.Write([]byte("event: end\n\n"))

@@ -78,7 +78,7 @@ func getAllKeysFromFile(keyFilePath string) ([]string, error) {
 // 返回值:
 // selectedKey: 获取到的秘钥
 // err: 如果发生文件读取错误等，则返回错误
-func GetRandomKey(keyFilePath string) (selectedKey string, err error) {
+func GetRandomKey(keyFilePath string, falseKeys []string) (selectedKey string, err error) {
 	// 在访问 statusMap 之前锁定 mutex
 	keyStatusMutex.Lock()
 	defer keyStatusMutex.Unlock() // 在函数退出时解锁
@@ -88,7 +88,7 @@ func GetRandomKey(keyFilePath string) (selectedKey string, err error) {
 	allKeys, err := getAllKeysFromFile(keyFilePath)
 	if err != nil {
 		// 即使文件读取失败，也需要解锁，否则会导致死锁
-		return "", fmt.Errorf("failed to read all keys from file: %w", err)
+		fmt.Errorf("failed to read all keys from file: %w", err)
 	}
 
 	if len(allKeys) == 0 {
@@ -122,9 +122,18 @@ func GetRandomKey(keyFilePath string) (selectedKey string, err error) {
 
 		// 如果没有可用 key，释放锁并等待条件变量
 		// Wait 方法会自动释放锁并在收到 Signal 或 Broadcast 时再次获取锁
-		fmt.Printf("All keys are in use. Waiting for a key to be released... (Total keys: %d)\n", len(allKeys))
-		keyStatusCond.Wait() // 在这里等待，直到有key被释放并广播
+		fmt.Printf("所有Key都在使用中,强行解锁Key值以便正常使用 (Total keys: %d)\n", len(allKeys))
 
+		//// 将falseKeys的值拿一个出来
+		//if len(falseKeys) > 0 {
+		//	firstKey := falseKeys[0] // 取出第一个元素
+		//	fmt.Println("从列表中取出的一个key值强行解锁：", firstKey)
+		//	ReleaseKey(firstKey)
+		//} else {
+		//	fmt.Println("falseKeys 列表为空，无法取出值。")
+		//}
+
+		keyStatusCond.Wait() // 在这里等待，直到有key被释放并广播
 		// 当 Wait 返回时，表示有一个 key 状态发生变化，并且我们再次获取了锁。
 		// 循环会继续，重新检查是否有可用 key。
 		// 注意：Wait 返回后，你需要重新检查条件，因为可能有多个goroutine被唤醒，

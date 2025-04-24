@@ -21,4 +21,4 @@ COPY novel-arm  ./
 EXPOSE 3388
 
 # Command to run the executable
-CMD ["./novel-x86"]
+CMD ["./novel-arm"]
