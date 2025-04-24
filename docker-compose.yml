@@ -1,0 +1,13 @@
+version: '3'
+services:
+  novel-api:
+    image: novel-api
+    volumes:
+      - './keys/tokens:/root/keys/tokens'
+      - './keys/tokens_err:/root/keys/tokens_err'
+      - './config.yml:/root/config.yml'
+    container_name: novel-api
+    ports:
+      - '3388:3388'
+    tty: true
+    stdin_open: true

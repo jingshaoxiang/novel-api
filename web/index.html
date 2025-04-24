@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokens 管理</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            /* 添加背景渐变，模拟截图中的柔和背景 */
+            background: linear-gradient(to top right, #c3a3e5, #f3e7e9, #e3eeff);
+            display: flex;
+            justify-content: center; /* 水平居中容器 */
+            align-items: center; /* 垂直居中容器 */
+            background-attachment: fixed; /* 背景不随滚动条移动 */
+        }
+
+        .card-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 15px; /* 更圆润的边角 */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* 更明显的阴影 */
+            width: 90%;
+            max-width: 600px; /* 最大宽度 */
+            text-align: center; /* 文本居中 */
+            box-sizing: border-box; /* 包含内边距和边框在元素的总宽度内 */
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 15px; /* 增加下方间距 */
+        }
+
+        .token-count {
+            margin-bottom: 25px; /* 增加下方间距 */
+            font-size: 1.2em; /* 稍微增大字体 */
+            color: #555;
+        }
+
+        .token-count span {
+            font-weight: bold;
+            color: #007bff; /* 可用 Tokens 数量使用蓝色 */
+            font-size: 1.3em; /* 突出数量 */
+        }
+
+        textarea {
+            width: 100%; /* 让文本框占满父容器 */
+            min-height: 250px; /* 增加默认高度 */
+            padding: 10px;
+            margin-bottom: 20px; /* 增加下方间距 */
+            border: 1px solid #ccc;
+            border-radius: 8px; /* 稍微圆润的文本框边角 */
+            resize: vertical; /* 允许垂直调整大小 */
+            font-size: 1em;
+            line-height: 1.5; /* 行高，提高可读性 */
+            box-sizing: border-box; /* 包含内边距和边框在元素的总宽度内 */
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* 增加按钮之间的间距 */
+        }
+
+        button {
+            padding: 15px 25px; /* 增加按钮内边距 */
+            border: none;
+            border-radius: 8px; /* 更圆润的按钮边角 */
+            font-size: 1.1em; /* 稍微增大按钮字体 */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease; /* 添加按下效果 */
+            color: white;
+            width: 100%; /* 让按钮占满父容器 */
+            box-sizing: border-box; /* 包含内边距和边框在元素的总宽度内 */
+        }
+
+        button:active {
+            transform: scale(0.98); /* 按下时稍微缩小 */
+        }
+
+        .upload-button {
+            background-color: #007bff; /* 蓝色 */
+        }
+
+        .upload-button:hover {
+            background-color: #0056b3; /* 深蓝色 */
+        }
+
+        .view-errors-button {
+            background-color: #ffc107; /* 黄色 */
+        }
+
+        .view-errors-button:hover {
+            background-color: #e0a800; /* 深黄色 */
+        }
+
+        .clear-tokens-button {
+            background-color: #dc3545; /* 红色 */
+        }
+
+        .clear-tokens-button:hover {
+            background-color: #c82333; /* 深红色 */
+        }
+
+        .notes {
+            margin-top: 25px; /* 增加上方间距 */
+            font-size: 0.95em; /* 调整字体大小 */
+            color: #666;
+            text-align: left; /* 左对齐注释 */
+            line-height: 1.4; /* 调整行高 */
+        }
+
+        #error-tokens-display {
+            margin-top: 15px;
+            font-size: 0.95em;
+            color: red;
+            text-align: left; /* 将错误信息也左对齐 */
+            white-space: pre-wrap; /* Preserve line breaks */
+            word-wrap: break-word; /* Allow long words to break */
+        }
+
+
+    </style>
+</head>
+<body>
+
+<!-- 主容器，模拟卡片外观 -->
+<div class="card-container">
+    <h1>Tokens 管理</h1>
+    <p class="token-count">当前可用 Tokens 数量: <span id="available-tokens-count">0</span></p>
+
+    <textarea id="tokens" placeholder="一行一个Token, 可以是 AccessToken 或 RefreshToken"></textarea>
+
+    <div class="button-group">
+        <button class="upload-button" onclick="uploadTokens()">上传</button>
+        <button class="view-errors-button" onclick="viewErrorTokens()">查看错误Tokens</button>
+        <button class="clear-tokens-button" onclick="clearTokens()">清空Tokens</button>
+    </div>
+
+    <p class="notes">注: 使用docker时如果挂载了data文件夹则重启后不需要再次上传</p>
+    <!-- 错误 Tokens 显示区域 -->
+    <p class="notes" id="error-tokens-display" style="display: none;"></p>
+</div>
+
+
+<script src="script.js"></script>
+<script>
+    // 在页面加载完成后立即获取 Tokens 数量
+    document.addEventListener('DOMContentLoaded', (event) => {
+        getAvailableTokensCount();
+        // 可以在这里尝试从后端加载当前的 Tokens 列表到文本框
+        // 例如：loadTokensFromServer(); // 需要后端提供获取 Tokens 列表的接口
+    });
+
+    // 如果后端提供加载当前 Tokens 列表的接口，可以实现此函数
+    async function loadTokensFromServer() {
+        const tokensTextarea = document.getElementById('tokens');
+        try {
+            // 假设后端有一个 GET /tokens 接口返回所有 Tokens 数组
+            const response = await fetch(`${API_BASE_URL}/tokens`);
+            if (response.ok) {
+                const data = await response.json(); // 假设返回 { tokens: ["token1", "token2"] }
+                if (data.tokens && Array.isArray(data.tokens)) {
+                    tokensTextarea.value = data.tokens.join('\n'); // 将数组转为文本框内容，每行一个
+                }
+            } else {
+                console.error("Failed to load tokens from server:", response.statusText);
+                // 可以给用户提示加载失败
+            }
+        } catch (error) {
+            console.error("Error loading tokens from server:", error);
+            // 可以给用户提示加载错误
+        }
+    }
+</script>
+</body>
+</html>
