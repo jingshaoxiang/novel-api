@@ -59,3 +59,29 @@ docker load < ./docker/novel-x86.tar
 
 docker-compose up -d # 启动容器
 ```
+
+### 密钥获取方式
+1.访问 https://novelai.net/image 创建账号，打开 F12 查看，找到 负载 中有数据的接口。
+![img_1.png](img_1.png)
+![img_2.png](img_2.png)
+
+
+### 进入到 http://127.0.0.1:3388/web 填入Key即可使用！
+![img_3.png](img_3.png)
+
+### 进入到New-api中添加渠道
+![img_4.png](img_4.png)
+
+### 即可正常调用画图
+```azure
+### 画图格式为：
+正词：想画的关键词 
+    
+反词：不想画出来的关键词
+```
+
+### 效果
+![img_5.png](img_5.png)
+
+### 如果不符合格式则会出来白毛
+![img_6.png](img_6.png)
