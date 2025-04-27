@@ -324,8 +324,15 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 
 		// 如果状态码不等于 200 则重试
 		if resp.StatusCode == http.StatusOK {
+			// 先释放 key 值
+			ReleaseKey(keys)
 			break
 		}
+
+		// 先释放 key 值
+		ReleaseKey(keys)
+
+		// 等待 5 秒
 		time.Sleep(5 * time.Second)
 	}
 
@@ -337,9 +344,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 		ReleaseKey(keys)
 		return
 	}
-
-	// 释放key值
-	ReleaseKey(keys)
 
 	//log.Printf("Received response with status code: %d", resp.StatusCode)
 
