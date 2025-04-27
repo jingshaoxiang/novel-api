@@ -122,7 +122,7 @@ func GetRandomKey(keyFilePath string, falseKeys []string) (selectedKey string, e
 
 		// 如果没有可用 key，释放锁并等待条件变量
 		// Wait 方法会自动释放锁并在收到 Signal 或 Broadcast 时再次获取锁
-		fmt.Printf("所有Key都在使用中,强行解锁Key值以便正常使用 (Total keys: %d)\n", len(allKeys))
+		fmt.Printf("所有Key都在使用中,请耐心等待其他 Key 值释放 (Total keys: %d)\n", len(allKeys))
 
 		//// 将falseKeys的值拿一个出来
 		//if len(falseKeys) > 0 {

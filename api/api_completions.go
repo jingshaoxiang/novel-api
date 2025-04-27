@@ -171,17 +171,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 获取被锁定的key值
-	falseKeys := GetLockedKeys()
-	fmt.Println("获取锁定的key值列表：", falseKeys)
-
-	// 获取随机密钥
-	keys, err := GetRandomKey(viper.GetString("Nkey.path"), falseKeys)
-	fmt.Println("获取到的随机key：", keys)
-	if err != nil {
-		log.Fatalf("Error getting random key: %v", err)
-	}
-
 	// 如果是 OPTIONS 请求，直接返回 200 OK
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -193,9 +182,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Failed to decode request body: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		// 释放key值
-		ReleaseKey(keys)
-		return
 	}
 
 	// 获取最后一条用户输入
@@ -218,8 +204,6 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 		base64String, err = ImageURLToBase64(imageURLS)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
-			// 释放key值
-			ReleaseKey(keys)
 		}
 	}
 
@@ -231,111 +215,140 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	rand.Seed(time.Now().UnixNano()) // 使用当前时间的纳秒数作为随机数生成器的种子
 	randomSeed := rand.Intn(1000000) // 生成一个0到999999之间的随机数
 
-	// 创建请求到目标 API
-	apiURL := "https://image.novelai.net/ai/generate-image"
-	log.Println("Preparing payload for API request.")
-	// 支持自定义
-	payload := map[string]interface{}{
-		"input":  positiveWords + ",best quality, amazing quality, very aesthetic, absurdres",
-		"model":  req.Model,
-		"action": "generate",
-		"parameters": map[string]interface{}{
-			"params_version":                 config.Parameters.ParamsVersion,
-			"width":                          config.Parameters.Width,
-			"height":                         config.Parameters.Height,
-			"scale":                          config.Parameters.Scale,
-			"sampler":                        config.Parameters.Sampler,
-			"steps":                          config.Parameters.Steps,
-			"seed":                           randomSeed,
-			"n_samples":                      config.Parameters.NSamples,
-			"ucPreset":                       config.Parameters.UCPreset,
-			"qualityToggle":                  config.Parameters.QualityToggle,
-			"sm":                             config.Parameters.SM,
-			"sm_dyn":                         config.Parameters.SMDyn,
-			"dynamic_thresholding":           config.Parameters.DynamicThresholding,
-			"controlnet_strength":            config.Parameters.ControlNetStrength,
-			"legacy":                         config.Parameters.Legacy,
-			"add_original_image":             config.Parameters.AddOriginalImage,
-			"cfg_rescale":                    config.Parameters.CFGRescale,
-			"noise_schedule":                 config.Parameters.NoiseSchedule,
-			"legacy_v3_extend":               config.Parameters.LegacyV3Extend,
-			"skip_cfg_above_sigma":           config.Parameters.SkipCFGAboveSigma,
-			"negative_prompt":                negativeWords + "pussy, nipples, nude, naked, nsfw, lowres, {bad}, error, fewer, extra, missing, worst quality, jpeg artifacts, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, [abstract]",
-			"deliberate_euler_ancestral_bug": config.Parameters.DeliberateEulerAncestralBug,
-			"prefer_brownian":                config.Parameters.PreferBrownian,
-		},
+	// 返回值
+	var resp *http.Response
+	var keys string
+	for i := 0; i < 5; i++ {
+
+		// 获取被锁定的key值
+		falseKeys := GetLockedKeys()
+		fmt.Println("获取锁定的key值列表：", falseKeys)
+
+		// 获取随机密钥
+		keys, err = GetRandomKey(viper.GetString("Nkey.path"), falseKeys)
+		fmt.Println("获取到的随机key：", keys)
+		if err != nil {
+			log.Fatalf("Error getting random key: %v", err)
+		}
+
+		// 创建请求到目标 API
+		apiURL := "https://image.novelai.net/ai/generate-image"
+		log.Println("Preparing payload for API request.")
+		// 支持自定义
+		payload := map[string]interface{}{
+			"input":  positiveWords + ",best quality, amazing quality, very aesthetic, absurdres",
+			"model":  req.Model,
+			"action": "generate",
+			"parameters": map[string]interface{}{
+				"params_version":                 config.Parameters.ParamsVersion,
+				"width":                          config.Parameters.Width,
+				"height":                         config.Parameters.Height,
+				"scale":                          config.Parameters.Scale,
+				"sampler":                        config.Parameters.Sampler,
+				"steps":                          config.Parameters.Steps,
+				"seed":                           randomSeed,
+				"n_samples":                      config.Parameters.NSamples,
+				"ucPreset":                       config.Parameters.UCPreset,
+				"qualityToggle":                  config.Parameters.QualityToggle,
+				"sm":                             config.Parameters.SM,
+				"sm_dyn":                         config.Parameters.SMDyn,
+				"dynamic_thresholding":           config.Parameters.DynamicThresholding,
+				"controlnet_strength":            config.Parameters.ControlNetStrength,
+				"legacy":                         config.Parameters.Legacy,
+				"add_original_image":             config.Parameters.AddOriginalImage,
+				"cfg_rescale":                    config.Parameters.CFGRescale,
+				"noise_schedule":                 config.Parameters.NoiseSchedule,
+				"legacy_v3_extend":               config.Parameters.LegacyV3Extend,
+				"skip_cfg_above_sigma":           config.Parameters.SkipCFGAboveSigma,
+				"negative_prompt":                negativeWords + "pussy, nipples, nude, naked, nsfw, lowres, {bad}, error, fewer, extra, missing, worst quality, jpeg artifacts, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, [abstract]",
+				"deliberate_euler_ancestral_bug": config.Parameters.DeliberateEulerAncestralBug,
+				"prefer_brownian":                config.Parameters.PreferBrownian,
+			},
+		}
+
+		// 根据是否有有效的 base64String 来决定是否添加这三个字段
+		if base64String != "" {
+			payload["parameters"].(map[string]interface{})["reference_image_multiple"] = []interface{}{base64String}
+			payload["parameters"].(map[string]interface{})["reference_information_extracted_multiple"] = []interface{}{1}
+			payload["parameters"].(map[string]interface{})["reference_strength_multiple"] = []interface{}{0.6}
+		}
+
+		// 将 payload 转换为 JSON
+		payloadBytes, _ := json.Marshal(payload)
+		log.Println("Payload marshaled to JSON")
+
+		// 创建新的请求
+		client := &http.Client{}
+		request, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
+		if err != nil {
+			log.Printf("Failed to create new request: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			// 释放key值
+			ReleaseKey(keys)
+			return
+		}
+		log.Println("API request created successfully:", request)
+
+		// 设置请求头
+		request.Header.Set("Authorization", "Bearer "+keys)
+		//fmt.Println("Authorization", "Bearer "+keys)
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Accept", "*/*")
+		request.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
+		request.Header.Set("Cache-Control", "no-cache")
+		request.Header.Set("Origin", "https://novelai.net")
+		request.Header.Set("Pragma", "no-cache")
+		request.Header.Set("Referer", "https://novelai.net/")
+		log.Println("Request headers set.")
+		//fmt.Println("Authorization", r.Header.Get("Authorization"))
+
+		// 发送请求
+		resp, err = client.Do(request)
+		if err != nil {
+			log.Printf("(发送请求失败)Failed to send request: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		// 401 状态码指的是 API 密钥未经过身份验证
+		if resp.StatusCode == http.StatusUnauthorized {
+			log.Printf("API Key unauthorized (401): %s", resp.Status)
+			// 先释放 key 值
+			ReleaseKey(keys)
+			// 将 key 从文件中删除并添加到其他文件（假设你有一个函数来处理这个）
+			HandleUnauthorizedKey(keys) // 假设 HandleUnauthorizedKey 是你的处理函数
+			http.Error(w, "API Key unauthorized. Key potential expired or invalid.", http.StatusUnauthorized)
+			return
+		}
+
+		log.Printf("Too many requests. Retrying in 5 seconds... code: %d", resp.StatusCode)
+
+		// 如果状态码不等于 200 则重试
+		if resp.StatusCode == http.StatusOK {
+			break
+		}
+		time.Sleep(5 * time.Second)
 	}
 
-	// 根据是否有有效的 base64String 来决定是否添加这三个字段
-	if base64String != "" {
-		payload["parameters"].(map[string]interface{})["reference_image_multiple"] = []interface{}{base64String}
-		payload["parameters"].(map[string]interface{})["reference_information_extracted_multiple"] = []interface{}{1}
-		payload["parameters"].(map[string]interface{})["reference_strength_multiple"] = []interface{}{0.6}
-	}
-
-	// 将 payload 转换为 JSON
-	payloadBytes, _ := json.Marshal(payload)
-	log.Println("Payload marshaled to JSON")
-
-	// 创建新的请求
-	client := &http.Client{}
-	request, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		log.Printf("Failed to create new request: %v", err)
+	// 如果最终状态码不等于 200 则返回
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("最终状态码为:%d", resp.StatusCode)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		// 释放key值
 		ReleaseKey(keys)
 		return
 	}
-	log.Println("API request created successfully:", request)
-
-	// 设置请求头
-	request.Header.Set("Authorization", "Bearer "+keys)
-	//fmt.Println("Authorization", "Bearer "+keys)
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Accept", "*/*")
-	request.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
-	request.Header.Set("Cache-Control", "no-cache")
-	request.Header.Set("Origin", "https://novelai.net")
-	request.Header.Set("Pragma", "no-cache")
-	request.Header.Set("Referer", "https://novelai.net/")
-	log.Println("Request headers set.")
-	//fmt.Println("Authorization", r.Header.Get("Authorization"))
-
-	// 发送请求
-	resp, err := client.Do(request)
-	if err != nil {
-		log.Printf("Failed to send request: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 释放key值
-		ReleaseKey(keys)
-		return
-	}
-	defer resp.Body.Close()
 
 	// 释放key值
 	ReleaseKey(keys)
 
-	log.Printf("Received response with status code: %d", resp.StatusCode)
-
-	// 检查响应状态
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Failed to generate image: "+resp.Status, resp.StatusCode)
-		log.Printf("Error from API: %s", resp.Status)
-		if resp.StatusCode == http.StatusUnauthorized {
-			log.Printf("API Key unauthorized (401): %s", resp.Status)
-			// 将 key 从文件中删除并添加到其他文件（假设你有一个函数来处理这个）
-			HandleUnauthorizedKey(keys) // 假设 HandleUnauthorizedKey 是你的处理函数
-			http.Error(w, "API Key unauthorized. Key potential expired or invalid.", http.StatusUnauthorized)
-			return // 401 错误直接返回
-		}
-	}
+	//log.Printf("Received response with status code: %d", resp.StatusCode)
 
 	// 读取响应体
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, "Failed to read response body: "+err.Error(), http.StatusInternalServerError)
 		log.Printf("Failed to read response body: %v", err)
+		return
 	}
 	log.Println("Response body read successfully.")
 
@@ -344,6 +357,7 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to read ZIP file: "+err.Error(), http.StatusInternalServerError)
 		log.Printf("Failed to create zip reader: %v", err)
+		return
 	}
 	log.Println("ZIP file read successfully.")
 
