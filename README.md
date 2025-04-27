@@ -69,7 +69,8 @@ docker-compose up -d # 启动容器
 ### 进入到 http://127.0.0.1:3388/web 填入获取到的tokens,一行一个！
 ![img_3.png](images/img_3.png)
 
-### 进入到New-api中添加渠道，密钥填写配置文件中 自定义OpenAI格式的key，模型仅支持：nai-diffusion-3 nai-diffusion-furry-3
+### 进入到New-api中添加渠道，密钥填写配置文件中 自定义OpenAI格式的key
+> 模型仅支持：nai-diffusion-3 nai-diffusion-furry-3
 ![img_4.png](images/img_4.png)
 
 ### 即可正常调用画图
