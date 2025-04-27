@@ -1,8 +1,18 @@
+# 推送程序选择 现支持: Alist Minio
+channel:
+  name: "Alist"
+
 # Alist地址(后面不用加 / )(匿名用户允许访问文件记得开)
 alist:
   username: ""  #Alist管理员账号
   password: ""  #Alist管理员密码
   dir: "https://aaaaaaaaaaa/NoveAI"  #图片存放的Alist路径
+
+# Minio地址(后面不用加 / )
+minio:
+  username: ""
+  password: ""
+  dir: "https://aaaaaaaaaaa/NoveAI" #图片存放的Minio路径
 
 # 自定义OpenAI格式的key(New-api渠道中的秘钥,打开管理页面的秘钥)
 sk:
