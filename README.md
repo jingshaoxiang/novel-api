@@ -54,9 +54,9 @@ cd novel-api
 
 ```bash
 # 请根据您自己的系统类型导入最新的包
-
-docker load < ./docker/x86/novel-api.tar
-
+# image: 4maxcheck/novel-api-arm:latest
+# image: 4maxcheck/novel-api-x86:latest
+    
 docker-compose up -d # 启动容器
 ```
 
