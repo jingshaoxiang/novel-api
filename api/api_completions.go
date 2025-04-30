@@ -144,9 +144,20 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 获取配置文件中的参数
+	// 推送程序选择
+	channelName := viper.GetString("channel.name")
+
+	// alist 配置
 	alistDir := viper.GetString("alist.dir")
 	alistUsername := viper.GetString("alist.username")
 	alistPassword := viper.GetString("alist.password")
+
+	// minio 配置
+	minioUrl := viper.GetString("minio.Url")
+	minioAccessKey := viper.GetString("minio.AccessKey")
+	minioSecretKey := viper.GetString("minio.SecretKey")
+	minioBucket := viper.GetString("minio.Bucket")
+	minioAlias := viper.GetString("minio.Alias")
 
 	// 1. 获取 Authorization 请求头的值
 	authHeader := r.Header.Get("Authorization")
@@ -395,16 +406,31 @@ func Completions(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Println("图像文件写入成功。")
 
-			// 构建上传命令和参数
-			cmd := exec.Command("sh", "upload.sh", "--username", alistUsername, "--password", alistPassword, imageName, alistDir)
+			var outputs string
+			// 判断推送类型
+			if channelName == "Alist" {
+				// 构建上传命令和参数
+				cmd := exec.Command("sh", "Alist.sh", "--username", alistUsername, "--password", alistPassword, imageName, alistDir)
 
-			// 执行命令并获取输出
-			output, err := cmd.CombinedOutput() // CombinedOutput captures both stdout and stderr
-			if err != nil {
-				log.Printf("命令执行失败: %s 错误: %s", output, err)
+				// 执行命令并获取输出
+				output, err := cmd.CombinedOutput() // CombinedOutput captures both stdout and stderr
+				if err != nil {
+					log.Printf("命令执行失败: %s 错误: %s", output, err)
+				}
+
+				outputs = strings.ReplaceAll(string(output), "\n", "")
+			} else {
+				// 构建上传命令和参数
+				cmd := exec.Command("sh", "Minio.sh", minioAlias, minioUrl, minioAccessKey, minioSecretKey, imageName, minioBucket)
+
+				// 执行命令并获取输出
+				output, err := cmd.CombinedOutput() // CombinedOutput captures both stdout and stderr
+				if err != nil {
+					log.Printf("命令执行失败: %s 错误: %s", output, err)
+				}
+
+				outputs = strings.ReplaceAll(string(output), "\n", "")
 			}
-
-			outputs := strings.ReplaceAll(string(output), "\n", "")
 
 			// 打印命令输出
 			//log.Printf("URL输出:\n%s\n", output)

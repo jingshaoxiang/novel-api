@@ -2,21 +2,23 @@
 channel:
   name: "Alist"
 
+# 自定义OpenAI格式的key(New-api渠道中的秘钥,打开管理页面的秘钥)
+sk:
+  key: "sk-1a8a"
+
 # Alist地址(后面不用加 / )(匿名用户允许访问文件记得开)
 alist:
   username: ""  #Alist管理员账号
   password: ""  #Alist管理员密码
   dir: "https://aaaaaaaaaaa/NoveAI"  #图片存放的Alist路径
 
-# Minio地址(后面不用加 / )
+# Minio地址
 minio:
-  username: ""
-  password: ""
-  dir: "https://aaaaaaaaaaa/NoveAI" #图片存放的Minio路径
-
-# 自定义OpenAI格式的key(New-api渠道中的秘钥,打开管理页面的秘钥)
-sk:
-  key: "sk-1a8a"
+  AccessKey: ""  # minio 的 ak
+  SecretKey: "" # Minio 的 sk
+  Bucket: ""  # 存放图片的桶
+  Alias: ""  # 别名随意定制
+  Url: "https://aaaaaaaaaaa" #Minio 地址,是 9000 端口的地址(后面不用加 / )
 
 # Nai3 秘钥的文件地址
 Nkey:

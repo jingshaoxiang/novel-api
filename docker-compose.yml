@@ -1,7 +1,8 @@
 version: '3'
 services:
   novel-api:
-    image: novel-api
+    #image: 4maxcheck/novel-api-arm:latest
+    image: 4maxcheck/novel-api-x86:latest
     volumes:
       - './keys/tokens:/root/keys/tokens'
       - './keys/tokens_err:/root/keys/tokens_err'
